@@ -76,7 +76,7 @@ def main():
         SCAE_train_iter,
         num_epochs,
         val_iter=SCAE_val_iter,  # 传入验证集
-        patience=10,  # 设置耐心值
+        patience=25,  # 设置耐心值
         min_delta=0.001,  # 最小改善值
     )
     torch.save(SCAE_net, SCAE_model_path)
@@ -96,7 +96,7 @@ def main():
         CNN_train_iter,
         num_epochs,
         val_iter=CNN_val_iter,  # 传入验证集
-        patience=10,  # 设置耐心值
+        patience=25,  # 设置耐心值
         min_delta=0.001,  # 最小改善值
     )
     torch.save(CNN_net, CNN_model_path)
