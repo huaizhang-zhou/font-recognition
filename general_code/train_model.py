@@ -114,7 +114,7 @@ def train(
     )
     if lr_decay:
         scheduler_lr = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, factor=0.1, mode="min", patience=3, verbose=True
+            optimizer, factor=0.1, mode="min", patience=3
         )
     train_l_ls, train_acc_ls = [], []
     num_batch = len(train_iter)
@@ -150,6 +150,8 @@ def train(
         for i, (X, y) in enumerate(train_iter):
             optimizer.zero_grad()
             X, y = X.to(device), y.to(device)
+            if loss.__class__.__name__ == "CrossEntropyLoss":
+                y = y.long()  # 转换为Long类型
             y_hat = net(X)
             l = loss(y_hat, y)
             # if i % int(num_batch / 10) == 0:

@@ -17,10 +17,10 @@ def main():
     real_image_path = "./dataset/real_images"
     models_path = "./dataset/models"
 
-    total_num = 100_000
+    total_num = 100
     language = "en"
-    gen_batch_size = 50
-    sample_batch_size = 50
+    gen_batch_size = 1
+    sample_batch_size = 1
     sample_num = 5
     sample_width = 105
     sample_height = 105
@@ -28,34 +28,37 @@ def main():
     train_batch_size = 50
     num_epochs = 20
 
+    generate_image = False
+
     fonts_ls = image_generation.get_fonts_list(fonts_path)
     num_fonts = len(fonts_ls)
     SCAE_model_path = f"{models_path}\\SCAE_{language}_{num_fonts}.pth"
     CNN_model_path = f"{models_path}\\CNN_{language}_{num_fonts}.pth"
     font_dict_path = f"{models_path}\\font_dict_{language}_{num_fonts}.json"
 
-    image_generation.generate_images(
-        total_num=total_num,
-        language=language,
-        fonts_path=fonts_path,
-        gen_batch_size=gen_batch_size,
-        gen_image_path=generated_image_path,
-        label_df_path=generated_label_path,
-        need_save=True,
-        need_return=False,
-    )
+    if generate_image:
+        image_generation.generate_images(
+            total_num=total_num,
+            language=language,
+            fonts_path=fonts_path,
+            gen_batch_size=gen_batch_size,
+            gen_image_path=generated_image_path,
+            label_df_path=generated_label_path,
+            need_save=True,
+            need_return=False,
+        )
 
-    image_generation.saved_images_sampling(
-        total_num=total_num,
-        img_path=generated_image_path,
-        sample_path=generated_image_path,
-        sample_batch_size=sample_batch_size,
-        sample_num=sample_num,
-        width=sample_width,
-        height=sample_height,
-        need_save=True,
-        need_return=False,
-    )
+        image_generation.saved_images_sampling(
+            total_num=total_num,
+            img_path=generated_image_path,
+            sample_path=generated_image_path,
+            sample_batch_size=sample_batch_size,
+            sample_num=sample_num,
+            width=sample_width,
+            height=sample_height,
+            need_save=True,
+            need_return=False,
+        )
 
     SCAE_train_iter, _ = SCAE.get_SCAE_dataloader_dataset(
         batch_size=train_batch_size,

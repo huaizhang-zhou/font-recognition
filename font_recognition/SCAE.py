@@ -80,7 +80,7 @@ def get_SCAE_dataloader_dataset(
     generated_label_path: str,
     real_img_path: str,
 ):
-    return data_loader.get_train_dataset_dataloader(
+    return data_loader.get_dataloader_dataset(
         "SCAE",
         generated_img_path,
         generated_label_path,

@@ -38,6 +38,7 @@ class TextAttributesRecognitionDataset(dataset.Dataset):
         self.img_path_ls = []
         self.generated_img_ls = []
         self.real_img_ls = []
+        self.label_df = self.generated_label_df
 
         # add paths of generated images
         for i in range(total_num):
@@ -55,7 +56,7 @@ class TextAttributesRecognitionDataset(dataset.Dataset):
                     self.real_img_ls.append(directory)
             self.img_path_ls += self.real_img_ls
 
-    def load_and_process_img(img_path: str):
+    def load_and_process_img(self, img_path: str):
         img = utils.load_image(img_path)
         img = utils.img_to_tensor(img)
 

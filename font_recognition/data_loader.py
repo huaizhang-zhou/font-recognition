@@ -40,14 +40,13 @@ class FontRecognitionDataset(TextAttributesRecognitionDataset):
             font_series = self.label_df["font"]
             font_ls = font_series.unique().tolist()
             self.font_dict = {font_ls[i]: i for i in range(len(font_ls))}
-            font_id_series = torch.tensor(
+            self.labels = torch.tensor(
                 font_series.apply(lambda x: self.font_dict[x]).tolist()
             )
-            self.labels = torch.nn.functional.one_hot(font_id_series)
         else:
             raise ValueError("Model type can only be `SCAE` or `CNN`.")
 
-    def load_and_process_img(img_path: str):
+    def load_and_process_img(self, img_path: str):
         img = load_image(img_path)
         img = img.convert("L")
         img = img_to_tensor(img)
