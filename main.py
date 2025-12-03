@@ -26,15 +26,15 @@ def main():
     sample_height = 105
 
     train_batch_size = 50
-    num_epochs = 20
+    num_epochs = 200
 
     generate_image = False
 
     fonts_ls = image_generation.get_fonts_list(fonts_path)
     num_fonts = len(fonts_ls)
-    SCAE_model_path = f"{models_path}\\SCAE_{language}_{num_fonts}.pth"
-    CNN_model_path = f"{models_path}\\CNN_{language}_{num_fonts}.pth"
-    font_dict_path = f"{models_path}\\font_dict_{language}_{num_fonts}.json"
+    SCAE_model_path = f"{models_path}/SCAE_{language}_{num_fonts}.pth"
+    CNN_model_path = f"{models_path}/CNN_{language}_{num_fonts}.pth"
+    font_dict_path = f"{models_path}/font_dict_{language}_{num_fonts}.json"
 
     if generate_image:
         image_generation.generate_images(
@@ -60,30 +60,48 @@ def main():
             need_return=False,
         )
 
-    SCAE_train_iter, _ = SCAE.get_SCAE_dataloader_dataset(
+    # 修改：获取训练集和验证集
+    SCAE_train_iter, SCAE_val_iter, _ = SCAE.get_SCAE_train_val_dataloader(
         batch_size=train_batch_size,
         total_num=total_num,
         sample_num=sample_num,
         generated_img_path=generated_image_path,
         generated_label_path=generated_label_path,
         real_img_path=real_image_path,
+        val_split=0.2,
     )
     SCAE_net = SCAE.SCAE()
-    SCAE.train_SCAE(SCAE_net, SCAE_train_iter, num_epochs)
+    SCAE.train_SCAE(
+        SCAE_net,
+        SCAE_train_iter,
+        num_epochs,
+        val_iter=SCAE_val_iter,  # 传入验证集
+        patience=10,  # 设置耐心值
+        min_delta=0.001,  # 最小改善值
+    )
     torch.save(SCAE_net, SCAE_model_path)
 
-    CNN_train_iter, CNN_train_dataset = CNN.get_CNN_dataloader_dataset(
+    # 修改：获取训练集和验证集
+    CNN_train_iter, CNN_val_iter, CNN_full_dataset = CNN.get_CNN_train_val_dataloader(
         batch_size=train_batch_size,
         total_num=total_num,
         sample_num=sample_num,
         generated_img_path=generated_image_path,
         generated_label_path=generated_label_path,
+        val_split=0.2,
     )
     CNN_net = CNN.CNN(SCAE_net.encoder, num_fonts)
-    CNN.train_CNN(CNN_net, CNN_train_iter, num_epochs)
+    CNN.train_CNN(
+        CNN_net,
+        CNN_train_iter,
+        num_epochs,
+        val_iter=CNN_val_iter,  # 传入验证集
+        patience=10,  # 设置耐心值
+        min_delta=0.001,  # 最小改善值
+    )
     torch.save(CNN_net, CNN_model_path)
 
-    font_dict = CNN_train_dataset.font_dict
+    font_dict = CNN_full_dataset.font_dict
 
     with open(font_dict_path, "w") as f:
         json.dump(font_dict, f)

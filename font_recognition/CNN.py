@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Union
 
 import torch
 from torch import nn
@@ -67,7 +67,35 @@ class CNN(nn.Module):
         return X
 
 
-def train_CNN(net: CNN, train_iter: Iterable, type: str, num_epochs: int = 20):
+def get_CNN_train_val_dataloader(
+    batch_size: int,
+    total_num: int,
+    sample_num: int,
+    generated_img_path: str,
+    generated_label_path: str,
+    val_split: float = 0.2,
+):
+    return data_loader.get_train_val_dataloader(
+        "CNN",
+        generated_img_path,
+        generated_label_path,
+        None,
+        total_num,
+        sample_num,
+        batch_size,
+        val_split,
+        True,
+    )
+
+
+def train_CNN(
+    net: CNN,
+    train_iter: Iterable,
+    num_epochs: int = 20,
+    val_iter: Union[Iterable, None] = None,
+    patience: int = 10,
+    min_delta: float = 0.001,
+):
     train_model.train(
         net,
         train_iter,
@@ -79,6 +107,9 @@ def train_CNN(net: CNN, train_iter: Iterable, type: str, num_epochs: int = 20):
         calc_accuracy=True,
         task_name="CNN",
         lr_decay=True,
+        val_iter=val_iter,  # 新增
+        patience=patience,  # 新增
+        min_delta=min_delta,  # 新增
     )
 
 

@@ -77,3 +77,57 @@ def get_dataloader_dataset(
     )
 
     return train_loader, train_dataset
+
+
+def split_dataset(
+    dataset: dataset.Dataset, train_ratio: float = 0.8, random_seed: int = 42
+):
+    """将数据集拆分为训练集和验证集"""
+    from torch.utils.data import random_split
+
+    dataset_size = len(dataset)
+    train_size = int(train_ratio * dataset_size)
+    val_size = dataset_size - train_size
+
+    # 设置随机种子以确保可重复性
+    torch.manual_seed(random_seed)
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+
+    return train_dataset, val_dataset
+
+
+def get_train_val_dataloader(
+    model_type: str,
+    generated_img_path: str,
+    generated_label_path: str,
+    real_img_path: Union[str, None],
+    total_num: int,
+    sample_num: int,
+    batch_size: int,
+    val_split: float = 0.2,
+    shuffle: bool = True,
+    random_seed: int = 42,
+):
+    """获取训练集和验证集的数据加载器"""
+    full_dataset = FontRecognitionDataset(
+        model_type,
+        generated_img_path,
+        generated_label_path,
+        real_img_path,
+        total_num,
+        sample_num,
+    )
+
+    train_dataset, val_dataset = split_dataset(
+        full_dataset, train_ratio=1.0 - val_split, random_seed=random_seed
+    )
+
+    train_loader = dataloader.DataLoader(
+        dataset=train_dataset, batch_size=batch_size, shuffle=shuffle
+    )
+
+    val_loader = dataloader.DataLoader(
+        dataset=val_dataset, batch_size=batch_size, shuffle=False  # 验证集不需要shuffle
+    )
+
+    return train_loader, val_loader, full_dataset

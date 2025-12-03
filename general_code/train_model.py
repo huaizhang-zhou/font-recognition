@@ -100,6 +100,10 @@ def train(
     device: Union[torch.device, None] = None,
     task_name: str = "Untitled task",
     lr_decay: bool = False,
+    val_iter: Union[Iterable, None] = None,  # 新增：验证集
+    patience: int = 10,  # 新增：早停耐心值
+    min_delta: float = 0.001,  # 新增：最小改善值
+    save_best: bool = True,  # 新增：是否保存最佳模型
 ) -> None:
     """Train the model. Not task-specific."""
     if device is None:
@@ -107,6 +111,11 @@ def train(
     print(f"Start training...")
     print(f"Task name: {task_name}, Device: {device}")
     print(f"Learning rate: {lr}, Weight decay: {weight_decay}, Momentum: {momentum}")
+
+    # 新增：早停机制相关变量
+    best_val_loss = float("inf")
+    patience_counter = 0
+    best_model_state = None
 
     net.to(device)
     optimizer = torch.optim.SGD(
@@ -117,6 +126,8 @@ def train(
             optimizer, factor=0.1, mode="min", patience=3
         )
     train_l_ls, train_acc_ls = [], []
+    # 新增：记录验证损失
+    val_l_ls, val_acc_ls = [], []
     num_batch = len(train_iter)
 
     epoch_bar = tqdm(
@@ -154,8 +165,6 @@ def train(
                 y = y.long()  # 转换为Long类型
             y_hat = net(X)
             l = loss(y_hat, y)
-            # if i % int(num_batch / 10) == 0:
-            #    tqdm.write(f"epoch: {epoch}, iter: {i}, loss: {l.item()}")
             if torch.any(torch.isnan(y_hat)) or torch.any(torch.isnan(l)):
                 raise Exception(f"NAN in epoch: {epoch}, iter: {i}, loss: {l.item()}")
             l.backward()
@@ -170,33 +179,112 @@ def train(
             train_l_ls.append(train_l)
             train_acc_ls.append(train_acc)
             batch_bar.update()
-        if calc_accuracy:
-            tqdm.write(
-                f"epoch: {epoch}, train loss {train_l:.3f}, train acc {train_acc:.3f}"
-            )
+
+        # 新增：验证阶段
+        if val_iter is not None:
+            net.eval()
+            val_metric = [0, 0, 0]
+            with torch.no_grad():
+                for X_val, y_val in val_iter:
+                    X_val, y_val = X_val.to(device), y_val.to(device)
+                    if loss.__class__.__name__ == "CrossEntropyLoss":
+                        y_val = y_val.long()
+                    y_hat_val = net(X_val)
+                    l_val = loss(y_hat_val, y_val)
+                    val_metric[0] += l_val * X_val.shape[0]
+                    if calc_accuracy:
+                        val_metric[1] += accuracy(y_hat_val, y_val)
+                    val_metric[2] += X_val.shape[0]
+
+            val_loss = val_metric[0] / val_metric[2]
+            val_l_ls.append(val_loss)
+
+            if calc_accuracy:
+                val_acc = val_metric[1] / val_metric[2]
+                val_acc_ls.append(val_acc)
+                tqdm.write(
+                    f"epoch: {epoch}, train loss {train_l:.3f}, train acc {train_acc:.3f}, "
+                    f"val loss {val_loss:.3f}, val acc {val_acc:.3f}"
+                )
+            else:
+                tqdm.write(
+                    f"epoch: {epoch}, train loss {train_l:.3f}, val loss {val_loss:.3f}"
+                )
+
+            # 早停机制判断
+            if val_loss < best_val_loss - min_delta:
+                best_val_loss = val_loss
+                patience_counter = 0
+                # 保存最佳模型状态
+                if save_best:
+                    best_model_state = net.state_dict().copy()
+                tqdm.write(f"Validation loss improved to {val_loss:.4f}")
+            else:
+                patience_counter += 1
+                tqdm.write(f"No improvement for {patience_counter}/{patience} epochs")
+
+            # 检查是否应该早停
+            if patience_counter >= patience:
+                tqdm.write(f"Early stopping triggered at epoch {epoch}")
+                # 恢复最佳模型
+                if save_best and best_model_state is not None:
+                    net.load_state_dict(best_model_state)
+                    tqdm.write("Best model restored")
+                break
         else:
-            tqdm.write(f"epoch: {epoch}, train loss {train_l:.3f}")
+            # 如果没有验证集，只打印训练信息
+            if calc_accuracy:
+                tqdm.write(
+                    f"epoch: {epoch}, train loss {train_l:.3f}, train acc {train_acc:.3f}"
+                )
+            else:
+                tqdm.write(f"epoch: {epoch}, train loss {train_l:.3f}")
+
         if lr_decay:
             scheduler_lr.step(train_l)
 
         epoch_bar.update()
 
-    plt.plot(torch.tensor(train_l_ls).cpu().numpy())
-    plt.xlabel("iter (batch)")
-    plt.ylabel("loss")
-    plt.title(f"{task_name} training loss")
-    plt.savefig(f"./{task_name}_training_loss.png")
+    # 如果训练完成但从未触发早停，并且有保存最佳模型，则恢复最佳模型
+    if save_best and best_model_state is not None and val_iter is not None:
+        net.load_state_dict(best_model_state)
+
+    # 绘制损失曲线
+    plt.figure(figsize=(12, 5))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(torch.tensor(train_l_ls).cpu().numpy(), label="Training Loss")
+    if val_iter is not None:
+        plt.plot(val_l_ls, label="Validation Loss")
+        plt.legend()
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title(f"{task_name} Loss")
+    plt.grid(True, alpha=0.3)
 
     if calc_accuracy:
-        plt.plot(torch.tensor(train_acc_ls).cpu().numpy())
-        plt.xlabel("iter (batch)")
-        plt.ylabel("accuracy")
-        plt.title(f"{task_name} training accuracy")
-        plt.savefig(f"./{task_name}_training_accuracy.png")
-        print(f"train loss {train_l:.3f}, train acc {train_acc:.3f}")
+        plt.subplot(1, 2, 2)
+        plt.plot(torch.tensor(train_acc_ls).cpu().numpy(), label="Training Accuracy")
+        if val_iter is not None and len(val_acc_ls) > 0:
+            plt.plot(val_acc_ls, label="Validation Accuracy")
+            plt.legend()
+        plt.xlabel("Epoch")
+        plt.ylabel("Accuracy")
+        plt.title(f"{task_name} Accuracy")
+        plt.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(f"./{task_name}_training_curves.png")
+
+    if calc_accuracy:
+        if val_iter is not None:
+            print(f"Best val loss {best_val_loss:.3f}, val acc {val_acc_ls[-1]:.3f}")
+        print(f"Final train loss {train_l:.3f}, train acc {train_acc:.3f}")
         return train_l, train_acc
     else:
-        print(f"train loss {train_l:.3f}")
+        if val_iter is not None:
+            print(f"Best val loss {best_val_loss:.3f}")
+        print(f"Final train loss {train_l:.3f}")
         return train_l
 
 

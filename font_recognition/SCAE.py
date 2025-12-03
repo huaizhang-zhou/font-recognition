@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Union
 
 from PIL import Image
 import torch
@@ -92,7 +92,36 @@ def get_SCAE_dataloader_dataset(
     )
 
 
-def train_SCAE(net: SCAE, train_iter: Iterable, num_epochs: int = 20):
+def get_SCAE_train_val_dataloader(
+    batch_size: int,
+    total_num: int,
+    sample_num: int,
+    generated_img_path: str,
+    generated_label_path: str,
+    real_img_path: str,
+    val_split: float = 0.2,
+):
+    return data_loader.get_train_val_dataloader(
+        "SCAE",
+        generated_img_path,
+        generated_label_path,
+        real_img_path,
+        total_num,
+        sample_num,
+        batch_size,
+        val_split,
+        True,
+    )
+
+
+def train_SCAE(
+    net: SCAE,
+    train_iter: Iterable,
+    num_epochs: int = 20,
+    val_iter: Union[Iterable, None] = None,
+    patience: int = 10,
+    min_delta: float = 0.001,
+):
     train_model.train(
         net=net,
         train_iter=train_iter,
@@ -103,4 +132,7 @@ def train_SCAE(net: SCAE, train_iter: Iterable, num_epochs: int = 20):
         momentum=0.9,
         calc_accuracy=False,
         task_name="SCAE",
+        val_iter=val_iter,  # 新增
+        patience=patience,  # 新增
+        min_delta=min_delta,  # 新增
     )
