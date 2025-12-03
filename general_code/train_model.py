@@ -176,8 +176,17 @@ def train(
                 metric[2] += X.shape[0]
             train_l = metric[0] / metric[2]
             train_acc = metric[1] / metric[2]
-            train_l_ls.append(train_l)
-            train_acc_ls.append(train_acc)
+
+            # 修复：将训练损失转换为Python标量
+            train_l_ls.append(
+                train_l.item() if isinstance(train_l, torch.Tensor) else train_l
+            )
+            if calc_accuracy:
+                train_acc_ls.append(
+                    train_acc.item()
+                    if isinstance(train_acc, torch.Tensor)
+                    else train_acc
+                )
             batch_bar.update()
 
         # 新增：验证阶段
@@ -197,28 +206,35 @@ def train(
                     val_metric[2] += X_val.shape[0]
 
             val_loss = val_metric[0] / val_metric[2]
-            val_l_ls.append(val_loss)
+            # 修复：将验证损失转换为Python标量
+            val_loss_scalar = (
+                val_loss.item() if isinstance(val_loss, torch.Tensor) else val_loss
+            )
+            val_l_ls.append(val_loss_scalar)
 
             if calc_accuracy:
                 val_acc = val_metric[1] / val_metric[2]
-                val_acc_ls.append(val_acc)
+                val_acc_scalar = (
+                    val_acc.item() if isinstance(val_acc, torch.Tensor) else val_acc
+                )
+                val_acc_ls.append(val_acc_scalar)
                 tqdm.write(
                     f"epoch: {epoch}, train loss {train_l:.3f}, train acc {train_acc:.3f}, "
-                    f"val loss {val_loss:.3f}, val acc {val_acc:.3f}"
+                    f"val loss {val_loss_scalar:.3f}, val acc {val_acc_scalar:.3f}"
                 )
             else:
                 tqdm.write(
-                    f"epoch: {epoch}, train loss {train_l:.3f}, val loss {val_loss:.3f}"
+                    f"epoch: {epoch}, train loss {train_l:.3f}, val loss {val_loss_scalar:.3f}"
                 )
 
             # 早停机制判断
-            if val_loss < best_val_loss - min_delta:
-                best_val_loss = val_loss
+            if val_loss_scalar < best_val_loss - min_delta:
+                best_val_loss = val_loss_scalar
                 patience_counter = 0
                 # 保存最佳模型状态
                 if save_best:
                     best_model_state = net.state_dict().copy()
-                tqdm.write(f"Validation loss improved to {val_loss:.4f}")
+                tqdm.write(f"Validation loss improved to {val_loss_scalar:.4f}")
             else:
                 patience_counter += 1
                 tqdm.write(f"No improvement for {patience_counter}/{patience} epochs")
@@ -253,9 +269,12 @@ def train(
     plt.figure(figsize=(12, 5))
 
     plt.subplot(1, 2, 1)
-    plt.plot(torch.tensor(train_l_ls).cpu().numpy(), label="Training Loss")
+    # 修复：确保训练损失是numpy数组
+    train_l_array = np.array(train_l_ls)
+    plt.plot(train_l_array, label="Training Loss")
     if val_iter is not None:
-        plt.plot(val_l_ls, label="Validation Loss")
+        val_l_array = np.array(val_l_ls)
+        plt.plot(val_l_array, label="Validation Loss")
         plt.legend()
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
@@ -264,9 +283,12 @@ def train(
 
     if calc_accuracy:
         plt.subplot(1, 2, 2)
-        plt.plot(torch.tensor(train_acc_ls).cpu().numpy(), label="Training Accuracy")
+        # 修复：确保训练准确率是numpy数组
+        train_acc_array = np.array(train_acc_ls)
+        plt.plot(train_acc_array, label="Training Accuracy")
         if val_iter is not None and len(val_acc_ls) > 0:
-            plt.plot(val_acc_ls, label="Validation Accuracy")
+            val_acc_array = np.array(val_acc_ls)
+            plt.plot(val_acc_array, label="Validation Accuracy")
             plt.legend()
         plt.xlabel("Epoch")
         plt.ylabel("Accuracy")
@@ -279,13 +301,20 @@ def train(
     if calc_accuracy:
         if val_iter is not None:
             print(f"Best val loss {best_val_loss:.3f}, val acc {val_acc_ls[-1]:.3f}")
-        print(f"Final train loss {train_l:.3f}, train acc {train_acc:.3f}")
-        return train_l, train_acc
+        # 修复：将最终的训练损失和准确率转换为标量
+        final_train_l = train_l.item() if isinstance(train_l, torch.Tensor) else train_l
+        final_train_acc = (
+            train_acc.item() if isinstance(train_acc, torch.Tensor) else train_acc
+        )
+        print(f"Final train loss {final_train_l:.3f}, train acc {final_train_acc:.3f}")
+        return final_train_l, final_train_acc
     else:
         if val_iter is not None:
             print(f"Best val loss {best_val_loss:.3f}")
-        print(f"Final train loss {train_l:.3f}")
-        return train_l
+        # 修复：将最终的训练损失转换为标量
+        final_train_l = train_l.item() if isinstance(train_l, torch.Tensor) else train_l
+        print(f"Final train loss {final_train_l:.3f}")
+        return final_train_l
 
 
 def get_full_img_pred(

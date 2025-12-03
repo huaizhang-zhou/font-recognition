@@ -17,18 +17,18 @@ def main():
     real_image_path = "./dataset/real_images"
     models_path = "./dataset/models"
 
-    total_num = 100
+    total_num = 10000
     language = "en"
-    gen_batch_size = 1
-    sample_batch_size = 1
-    sample_num = 5
+    gen_batch_size = 5
+    sample_batch_size = 2
+    sample_num = 2
     sample_width = 105
     sample_height = 105
 
     train_batch_size = 50
     num_epochs = 200
 
-    generate_image = False
+    generate_image = True
 
     fonts_ls = image_generation.get_fonts_list(fonts_path)
     num_fonts = len(fonts_ls)
