@@ -17,7 +17,7 @@ if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
 from font_recognition import SCAE
-from font_recognition import data_loader
+from font_recognition import data_loader_2
 from general_code import train_model
 
 
@@ -75,7 +75,7 @@ def get_CNN_train_val_dataloader(
     generated_label_path: str,
     val_split: float = 0.2,
 ):
-    return data_loader.get_train_val_dataloader(
+    return data_loader_2.get_train_val_dataloader(
         "CNN",
         generated_img_path,
         generated_label_path,
@@ -120,7 +120,7 @@ def get_CNN_dataloader_dataset(
     generated_img_path: str,
     generated_label_path: str,
 ):
-    return data_loader.get_dataloader_dataset(
+    return data_loader_2.get_dataloader_dataset(
         "CNN",
         generated_img_path,
         generated_label_path,

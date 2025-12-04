@@ -18,7 +18,7 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from font_recognition import data_loader
+from font_recognition import data_loader_2
 from general_code import train_model
 
 
@@ -80,7 +80,7 @@ def get_SCAE_dataloader_dataset(
     generated_label_path: str,
     real_img_path: str,
 ):
-    return data_loader.get_dataloader_dataset(
+    return data_loader_2.get_dataloader_dataset(
         "SCAE",
         generated_img_path,
         generated_label_path,
@@ -101,7 +101,7 @@ def get_SCAE_train_val_dataloader(
     real_img_path: str,
     val_split: float = 0.2,
 ):
-    return data_loader.get_train_val_dataloader(
+    return data_loader_2.get_train_val_dataloader(
         "SCAE",
         generated_img_path,
         generated_label_path,

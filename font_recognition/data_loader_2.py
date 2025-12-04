@@ -12,7 +12,7 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from general_code.data_loader import TextAttributesRecognitionDataset
+from general_code.data_loader_1 import TextAttributesRecognitionDataset
 from general_code.utils import load_image, img_to_tensor
 
 
